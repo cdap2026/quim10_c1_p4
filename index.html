@@ -1,0 +1,1875 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Química 10°: Soluciones y Solubilidad | Gimnasio Cristiano Faro de Luz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        navy: { 950: '#030914', 900: '#081b38', 800: '#0f2b54', 700: '#163d73' },
+                        gold: { 500: '#c89d28', 400: '#dfb235', 300: '#f3d06b' },
+                        emerald: { 500: '#059669', 400: '#10b981' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: radial-gradient(circle at 15% 15%, #0f2b54 0%, #061326 55%, #020710 100%);
+            color: #f8fafc;
+            overflow-x: hidden;
+            touch-action: pan-y;
+        }
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(15, 43, 84, 0.78) 0%, rgba(8, 27, 56, 0.88) 100%);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(223, 178, 53, 0.28);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+        }
+        .option-card {
+            background: rgba(6, 19, 38, 0.75);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .option-card:hover {
+            transform: translateY(-3px) scale(1.01);
+            border-color: rgba(223, 178, 53, 0.65);
+            box-shadow: 0 10px 25px -5px rgba(200, 157, 40, 0.25);
+        }
+        .option-card.selected {
+            background: linear-gradient(135deg, rgba(200, 157, 40, 0.28) 0%, rgba(15, 43, 84, 0.9) 100%);
+            border: 2px solid #dfb235;
+            box-shadow: 0 0 25px rgba(223, 178, 53, 0.35);
+            transform: scale(1.015);
+        }
+        .gold-shimmer {
+            background: linear-gradient(90deg, #dfb235 0%, #fff6d1 50%, #c89d28 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 4s linear infinite;
+        }
+        @keyframes shimmer { to { background-position: 200% center; } }
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(14px) scale(0.99); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .animate-question { animation: fadeSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #040d1a; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #c89d28; border-radius: 3px; }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans select-none">
+
+    <!-- FONDO INTERACTIVO DE PARTÍCULAS QUÍMICAS -->
+    <canvas id="bgCanvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+
+    <!-- BARRA DE TELEMETRÍA SUPERIOR (SIN BOTÓN DOCENTE VISIBLE) -->
+    <header class="relative z-20 bg-navy-950/90 border-b border-gold-500/30 px-4 py-2 flex items-center justify-between text-xs shadow-lg">
+        <div class="flex items-center gap-2.5">
+            <span class="relative flex h-2.5 w-2.5">
+                <span id="telemetryPing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span id="telemetryDot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span class="font-mono text-[11px] sm:text-xs text-slate-200 tracking-wide">
+                TELEMETRÍA FIREBASE: <strong id="syncStatusText" class="text-emerald-400">EN LÍNEA</strong>
+            </span>
+        </div>
+
+        <!-- Monitor Acústico Ambiental -->
+        <div id="micBadgeContainer" class="flex items-center gap-2 bg-navy-900/90 px-3 py-1 rounded-full border border-slate-700/80">
+            <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+            <div class="w-16 sm:w-24 h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div id="soundBar" class="h-full bg-emerald-400 transition-all duration-100" style="width: 4%;"></div>
+            </div>
+            <span id="soundPct" class="font-mono text-[10px] text-slate-300 w-7 text-right">0%</span>
+        </div>
+
+        <!-- Reloj e Indicador de Penalizaciones -->
+        <div class="flex items-center gap-3">
+            <span id="liveClock" class="font-mono text-xs sm:text-sm text-gold-300 font-bold tracking-wider">--:--:--</span>
+            <div id="penaltyBadge" class="hidden items-center gap-1 bg-red-950/90 border border-red-500/60 px-2.5 py-0.5 rounded-full text-[11px] font-mono text-red-300 shadow">
+                <span>PENALIZACIÓN:</span>
+                <strong id="penaltyValue">-0.0</strong>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main class="relative z-10 flex-1 overflow-y-auto custom-scroll p-3 sm:p-5 flex flex-col max-w-5xl w-full mx-auto">
+
+        <!-- ==========================================
+             PANTALLA 1: BIENVENIDA
+        =========================================== -->
+        <section id="welcomeView" class="my-auto space-y-5 animate-question">
+            <div class="rounded-2xl overflow-hidden border-2 border-gold-500/40 shadow-2xl">
+                <canvas id="bannerCanvas" class="w-full h-auto block"></canvas>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
+                <div class="text-center space-y-2">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-gold-500/15 border border-gold-400/40 text-gold-300 text-xs font-mono uppercase tracking-widest">
+                        Prueba Estandarizada por Competencias • Grado 10°
+                    </div>
+                    <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
+                        Química: <span class="gold-shimmer">Soluciones y Curvas de Solubilidad</span>
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                        Evalúa tus competencias en interacción soluto-solvente, estados de saturación, factores termodinámicos y análisis cuantitativo de curvas de solubilidad. Tu progreso se sincroniza en tiempo real.
+                    </p>
+                </div>
+
+                <!-- Tarjetas Dinámicas con Iconografía SVG -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="bg-navy-950/70 p-3.5 rounded-2xl border border-slate-700/60 flex flex-col items-center text-center">
+                        <div class="w-10 h-10 rounded-xl bg-gold-500/20 border border-gold-400/40 flex items-center justify-center text-gold-300 mb-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                        </div>
+                        <span class="text-sm font-extrabold text-white">25 Cerradas</span>
+                        <span class="text-[11px] text-gold-300 font-mono">1.5 min c/u • 3.70 pts</span>
+                    </div>
+
+                    <div class="bg-navy-950/70 p-3.5 rounded-2xl border border-slate-700/60 flex flex-col items-center text-center">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 mb-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        </div>
+                        <span class="text-sm font-extrabold text-white">5 Abiertas</span>
+                        <span class="text-[11px] text-emerald-300 font-mono">7.0 min c/u • 1.30 pts</span>
+                    </div>
+
+                    <div class="bg-navy-950/70 p-3.5 rounded-2xl border border-slate-700/60 flex flex-col items-center text-center">
+                        <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 mb-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"/></svg>
+                        </div>
+                        <span class="text-sm font-extrabold text-white">Visores HD & 3D</span>
+                        <span class="text-[11px] text-cyan-300 font-mono">Modelos Interactivos</span>
+                    </div>
+
+                    <div class="bg-navy-950/70 p-3.5 rounded-2xl border border-slate-700/60 flex flex-col items-center text-center">
+                        <div class="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-300 mb-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        </div>
+                        <span class="text-sm font-extrabold text-white">Guardado Activo</span>
+                        <span class="text-[11px] text-rose-300 font-mono">Sincronización Cloud</span>
+                    </div>
+                </div>
+
+                <!-- Registro del Estudiante -->
+                <div class="space-y-2 pt-2">
+                    <label class="block text-xs sm:text-sm font-bold text-slate-200">
+                        Ingresa tus Nombres y Apellidos Completos:
+                    </label>
+                    <div class="relative">
+                        <input type="text" id="studentNameInput" autocomplete="off" placeholder="Ejemplo: Valeria Sofía Mendoza Rojas"
+                            class="w-full px-4 py-3.5 rounded-xl bg-navy-950/90 border-2 border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-gold-400 text-sm font-semibold transition">
+                        <span id="nameCheckTag" class="absolute right-3.5 top-3.5 text-xs font-mono text-slate-400">Requerido</span>
+                    </div>
+                </div>
+
+                <button id="startBtn" disabled
+                    class="w-full py-4 rounded-xl font-extrabold text-sm uppercase tracking-wider bg-slate-800 text-slate-500 cursor-not-allowed transition-all duration-300 shadow-lg">
+                    Escribe tu nombre y apellido para activar la evaluación
+                </button>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             PANTALLA 2: EVALUACIÓN INTERACTIVA
+        =========================================== -->
+        <section id="examView" class="hidden flex-1 flex-col space-y-4 my-auto">
+            <!-- Cabecera Dinámica de Progreso y Temporizador Circular -->
+            <div class="glass-panel rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div id="qBadge" class="px-3 py-1 rounded-lg font-mono text-xs font-bold bg-gold-500/20 text-gold-300 border border-gold-400/40">
+                        PARTE I • CERRADA
+                    </div>
+                    <div>
+                        <div id="qCounterText" class="text-sm sm:text-base font-extrabold text-white">Pregunta 1 de 30</div>
+                        <div id="qTopicText" class="text-[11px] font-mono text-cyan-300">Tema: Soluto y Solvente</div>
+                    </div>
+                </div>
+
+                <!-- Reloj Circular con Anillo SVG Dinámico -->
+                <div class="flex items-center gap-3 bg-navy-950/90 px-3.5 py-1.5 rounded-xl border border-gold-500/30">
+                    <div class="relative w-9 h-9 flex items-center justify-center">
+                        <svg class="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="15" fill="none" stroke="#1e293b" stroke-width="3.5"></circle>
+                            <circle id="timerRing" cx="18" cy="18" r="15" fill="none" stroke="#dfb235" stroke-width="3.5" stroke-dasharray="94.2" stroke-dashoffset="0" stroke-linecap="round" class="transition-all duration-500"></circle>
+                        </svg>
+                        <span class="text-[9px] font-mono text-gold-300 font-bold">SEG</span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] font-mono text-slate-400 uppercase">Tiempo de Bloqueo</span>
+                        <span id="timerText" class="font-mono text-lg font-extrabold text-gold-300 leading-none">01:30</span>
+                    </div>
+                </div>
+
+                <!-- Barra de Progreso General -->
+                <div class="w-full sm:w-44">
+                    <div class="flex justify-between text-[11px] font-mono text-slate-300 mb-1">
+                        <span>AVANCE GLOBAL</span>
+                        <span id="progressPctText" class="text-gold-300 font-bold">3%</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-navy-950 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                        <div id="progressBarFill" class="h-full bg-gradient-to-r from-gold-500 via-amber-300 to-emerald-400 rounded-full transition-all duration-500" style="width: 3.3%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tarjeta Principal de la Pregunta -->
+            <div id="questionCard" class="glass-panel rounded-3xl p-5 sm:p-7 flex-1 flex flex-col justify-between space-y-5 animate-question">
+                <div class="space-y-4">
+                    <!-- Insignia de Competencia ICFES -->
+                    <div class="flex items-center justify-between border-b border-slate-700/60 pb-2.5 text-xs">
+                        <span id="qCompetency" class="inline-flex items-center gap-1.5 font-mono text-emerald-300 font-semibold">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                            Competencia: Uso comprensivo del conocimiento científico
+                        </span>
+                        <span id="qValueTag" class="font-mono text-gold-300 text-[11px]">Valor: 0.148 pts</span>
+                    </div>
+
+                    <!-- Enunciado Contextual -->
+                    <div class="space-y-2">
+                        <p id="qContextParagraph" class="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal"></p>
+                        <p id="qStemParagraph" class="text-sm sm:text-base text-white font-bold leading-snug pt-1"></p>
+                    </div>
+
+                    <!-- VISOR DE LÁMINA CIENTÍFICA HD O MODELO 3D INTERACTIVO -->
+                    <div class="relative rounded-2xl overflow-hidden border-2 border-slate-700/90 bg-navy-950 shadow-2xl">
+                        <!-- Lámina PNG HD 900x600 -->
+                        <img id="hdScientificImg" class="w-full max-h-64 sm:max-h-80 object-contain mx-auto block" alt="Ilustración Científica de Laboratorio">
+
+                        <!-- Visor 3D Three.js -->
+                        <div id="threeContainer" class="hidden w-full h-64 sm:h-80 relative cursor-grab active:cursor-grabbing">
+                            <canvas id="threeCanvas" class="w-full h-full block"></canvas>
+                            <div class="absolute top-3 left-3 bg-navy-950/85 border border-gold-500/40 px-3 py-1 rounded-lg text-[11px] font-mono text-gold-300">
+                                CUBO MOLECULAR 3D INTERACTIVO
+                            </div>
+                            <div class="absolute bottom-3 right-3 bg-navy-950/85 border border-slate-700 px-3 py-1 rounded-lg text-[11px] font-mono text-cyan-300">
+                                ↺ Arrastra para rotar en 360°
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OPCIONES DE RESPUESTA CERRADA -->
+                <div id="closedOptionsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2"></div>
+
+                <!-- ÁREA DE RESPUESTA ABIERTA -->
+                <div id="openResponseBox" class="hidden space-y-2.5 pt-2">
+                    <div class="flex flex-wrap justify-between items-center text-xs gap-2">
+                        <span class="font-bold text-emerald-300">Argumentación Científica (Mínimo 4 líneas / 28 palabras con sentido químico):</span>
+                        <span id="openMetricsTag" class="font-mono text-amber-300 bg-navy-950 px-2.5 py-1 rounded border border-slate-700">0 palabras | 0 líneas</span>
+                    </div>
+                    <textarea id="openTextarea" rows="4"
+                        placeholder="Desarrolla aquí tu explicación detallada aplicando los principios de solubilidad, equilibrio, fuerzas intermoleculares y factores termodinámicos..."
+                        class="w-full p-3.5 rounded-2xl bg-navy-950/90 border-2 border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-gold-400 text-xs sm:text-sm leading-relaxed resize-none"></textarea>
+                </div>
+
+                <!-- PIE DE TARJETA Y BOTÓN DE AVANCE -->
+                <div class="pt-3 border-t border-slate-700/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div id="statusLockBanner" class="text-xs font-mono text-amber-300 flex items-center gap-2">
+                        <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>Analiza la pregunta. Avance bloqueado hasta llegar a 00:00.</span>
+                    </div>
+                    <button id="nextQuestionBtn" disabled
+                        class="w-full sm:w-auto px-7 py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-slate-800 text-slate-500 cursor-not-allowed transition-all duration-300">
+                        Tiempo en Curso...
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             PANTALLA 3: RESULTADOS FINALES Y REPORTE PDF
+        =========================================== -->
+        <section id="resultsView" class="hidden my-auto space-y-5 animate-question">
+            <div class="glass-panel rounded-3xl p-6 sm:p-8 text-center space-y-6">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-mono uppercase">
+                    ✓ Evaluación Registrada en Servidor Central
+                </div>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white">Dictamen Final de Evaluación</h2>
+                <p id="finalStudentLabel" class="text-sm font-mono text-gold-300 font-bold"></p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
+                    <div class="bg-navy-950/80 p-4 rounded-2xl border border-slate-700">
+                        <span class="text-xs font-mono text-slate-400 uppercase">Puntaje Académico</span>
+                        <div id="resBaseScore" class="text-3xl font-black text-white mt-1">0.00</div>
+                        <span class="text-[11px] text-slate-500">Sobre 5.00 puntos</span>
+                    </div>
+                    <div class="bg-navy-950/80 p-4 rounded-2xl border border-slate-700">
+                        <span class="text-xs font-mono text-slate-400 uppercase">Penalizaciones</span>
+                        <div id="resPenaltyScore" class="text-3xl font-black text-rose-400 mt-1">-0.00</div>
+                        <span class="text-[11px] text-slate-500">Control Antifraude</span>
+                    </div>
+                    <div class="bg-gradient-to-b from-gold-500/25 to-navy-950 p-4 rounded-2xl border-2 border-gold-400 shadow-xl">
+                        <span class="text-xs font-mono text-gold-300 font-bold uppercase">Calificación Definitiva</span>
+                        <div id="resFinalScore" class="text-4xl font-black text-gold-300 mt-1">0.00</div>
+                        <span class="text-[11px] text-gold-200 font-mono">Escala Oficial 0.0 - 5.0</span>
+                    </div>
+                </div>
+
+                <!-- Código QR de Verificación -->
+                <div class="bg-white p-4 rounded-2xl inline-block shadow-2xl">
+                    <canvas id="qrCanvas" class="w-40 h-40 block mx-auto"></canvas>
+                    <span class="block text-[10px] font-mono text-slate-700 font-bold mt-1">FIRMA QR • FARO DE LUZ</span>
+                </div>
+
+                <div class="pt-2">
+                    <button id="downloadPdfReportBtn"
+                        class="px-8 py-4 rounded-xl font-extrabold text-xs sm:text-sm uppercase tracking-wider bg-gradient-to-r from-gold-500 to-amber-500 hover:from-gold-400 hover:to-amber-400 text-navy-950 shadow-xl shadow-gold-500/25 transition flex items-center justify-center gap-2 mx-auto">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Descargar Certificado y Reporte Completo (PDF)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL BLOQUEANTE DE PANTALLA COMPLETA -->
+    <div id="fullscreenLockModal" class="fixed inset-0 z-50 bg-navy-950/95 backdrop-blur-xl hidden flex-col items-center justify-center p-4 text-center">
+        <div class="glass-panel max-w-md w-full p-7 rounded-3xl border-2 border-rose-500 space-y-4">
+            <div class="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-400 text-rose-400 flex items-center justify-center mx-auto">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <h3 class="text-xl font-extrabold text-white">Alerta de Entorno Seguro</h3>
+            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Has abandonado el modo de <strong>Pantalla Completa</strong> obligatorio. Para continuar con la evaluación debes restaurar la visualización protegida inmediatamente.
+            </p>
+            <button id="returnFullscreenBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-gold-500 to-amber-500 text-navy-950 font-extrabold text-xs uppercase tracking-wider">
+                Restaurar Pantalla Completa Ahora
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================================================
+           1. CONFIGURACIÓN CENTRAL Y ESTADO CON CONTROL REMOTO DE RESTRICCIONES
+           ========================================================================= */
+        const CONFIG = {
+            examId: 'quimica-10-soluciones-faro',
+            examTitle: 'Evaluación de Química 10° - Soluciones y Solubilidad',
+            firebaseUrl: 'https://faro-luz-evaluaciones-default-rtdb.firebaseio.com/',
+            closedTime: 90,   // 1.5 min (90 s)
+            openTime: 420,    // 7.0 min (420 s)
+            numClosed: 25,
+            numOpen: 5,
+            closedTotalPts: 3.70,
+            openTotalPts: 1.30
+        };
+
+        let appState = {
+            studentId: '',
+            studentName: '',
+            currentIdx: 0,
+            answers: {},
+            timerLeft: CONFIG.closedTime,
+            timerMax: CONFIG.closedTime,
+            penalties: 0,
+            penaltyHistory: [],
+            started: false,
+            finished: false,
+            startTimeStr: '',
+            endTimeStr: '',
+            lastActivity: Date.now(),
+            soundCooldown: 0,
+            // Estado de las restricciones (100% gobernadas desde la Consola Remota Docente)
+            restrictions: {
+                fullscreenLock: true,
+                tabSwitchPenalty: true,
+                soundMeterPenalty: true,
+                timerLock: true
+            }
+        };
+
+        let timerLoop = null;
+        let current3DMode = null;
+
+        /* =========================================================================
+           2. BANCO DE 30 PREGUNTAS (25 CERRADAS + 5 ABIERTAS)
+           ========================================================================= */
+        const QUESTIONS = [
+            {
+                type: 'closed', subtopic: 'Soluto y Solvente', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'En una práctica de laboratorio se prepara una disolución acuosa homogénea incorporando 12,0 g de glucosa cristalina (C₆H₁₂O₆) dentro de 180,0 g de agua destilada químicamente pura a 25 °C.',
+                question: 'Con base en el criterio de proporción másica y conservación de fase, ¿cuál es la clasificación correcta de los componentes de este sistema?',
+                options: [
+                    'A) La glucosa actúa como solvente porque presenta mayor masa molar que la molécula de agua.',
+                    'B) El agua es el solvente porque se halla en mayor abundancia y define el estado físico líquido de la solución.',
+                    'C) Ambos compuestos son solutos ya que establecen puentes de hidrógeno intermoleculares.',
+                    'D) La glucosa es el solvente porque reduce la presión de vapor del líquido resultante.'
+                ],
+                correct: 1, visual: 'beaker_glucose', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Soluciones Gaseosas', competency: 'Explicación de fenómenos',
+                context: 'El aire atmosférico seco al nivel del mar es una mezcla homogénea compuesta por 78,08 % de N₂, 20,95 % de O₂, 0,93 % de Ar y 0,04 % de CO₂ en porcentaje volumétrico.',
+                question: 'De acuerdo con la teoría físico-química de las soluciones, en esta mezcla gaseosa:',
+                options: [
+                    'A) El oxígeno molecular (O₂) es el solvente por ser el gas comburente activo en la respiración celular.',
+                    'B) El argón (Ar) actúa como solvente inerte debido a su configuración electrónica de octeto completo.',
+                    'C) El nitrógeno molecular (N₂) constituye el solvente al ser el componente en mayor proporción molar y volumétrica.',
+                    'D) No existe soluto ni solvente porque los gases ideales no experimentan fuerzas de atracción.'
+                ],
+                correct: 2, visual: 'gas_mixture', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Soluciones Sólidas (Aleaciones)', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'El latón naval utilizado en hélices de embarcaciones es una aleación sustitucional homogénea formada por un 65 % en masa de cobre (Cu) y un 35 % en masa de cinc (Zn).',
+                question: 'Respecto a la estructura cristalina de esta solución sólida, es correcto afirmar que:',
+                options: [
+                    'A) El cobre es el solvente matriz de la red cristalina y el cinc es el soluto sustituido.',
+                    'B) El cinc es el solvente porque funde a menor temperatura que el cobre puro.',
+                    'C) Se trata de un coloide heterogéneo porque dos metales sólidos no pueden mezclarse.',
+                    'D) Ambos metales pierden sus electrones de valencia convirtiéndose en un compuesto iónico.'
+                ],
+                correct: 0, visual: '3d_alloy_lattice', use3D: true
+            },
+            {
+                type: 'closed', subtopic: 'Solvatación e Interacción Ion-Dipolo', competency: 'Explicación de fenómenos',
+                context: 'Cuando un cristal de cloruro de sodio (NaCl) se introduce en agua, las moléculas polares de H₂O rodean a los cationes Na⁺ y a los aniones Cl⁻ formando esferas de hidratación.',
+                question: 'Inspecciona el modelo tridimensional interactivo. ¿Cómo se orientan electrostáticamente los dipolos del agua frente a cada ion?',
+                options: [
+                    'A) Los átomos de hidrógeno (δ⁺) apuntan hacia el catión Na⁺ y los oxígenos (δ⁻) hacia el anión Cl⁻.',
+                    'B) El átomo de oxígeno (densidad negativa δ⁻) se orienta hacia el catión Na⁺, mientras que los átomos de hidrógeno (densidad positiva δ⁺) se orientan hacia el anión Cl⁻.',
+                    'C) Las moléculas de agua forman enlaces covalentes coordinados permanentes con el anión Cl⁻.',
+                    'D) Los iones Na⁺ y Cl⁻ repelen a las moléculas de agua creando cavidades vacías.'
+                ],
+                correct: 1, visual: '3d_solvation_ion', use3D: true
+            },
+            {
+                type: 'closed', subtopic: 'Termodinámica de Disolución', competency: 'Indagación',
+                context: 'En las compresas frías instantáneas de uso deportivo, al romper la bolsa interna de agua sobre nitrato de amonio sólido (NH₄NO₃), la sal se disuelve rápidamente y la temperatura del paquete desciende de 25 °C a 3 °C.',
+                question: 'Desde el balance energético de entalpías (ΔH_sol = ΔH_red + ΔH_solvatación), este enfriamiento ocurre porque:',
+                options: [
+                    'A) La energía liberada durante la hidratación de los iones es mucho mayor que la energía reticular del cristal.',
+                    'B) La energía endotérmica absorbida para separar los iones de la red cristalina supera a la energía exotérmica liberada en la solvatación (ΔH_sol > 0).',
+                    'C) El nitrato de amonio destruye los enlaces covalentes internos de la molécula de agua.',
+                    'D) El sistema experimenta una reducción drástica de la entropía desprendiendo calor al entorno.'
+                ],
+                correct: 1, visual: 'enthalpy_profile', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Soluciones Insaturadas', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'A 20 °C, la solubilidad máxima del cloruro de potasio (KCl) es de 34,0 g por cada 100 g de agua. Un analista disuelve exactamente 21,5 g de KCl en 100 g de agua a 20 °C obteniendo una fase líquida transparente.',
+                question: '¿Cómo se clasifica termodinámicamente esta solución y qué ocurre si se añaden 5,0 g adicionales de KCl a la misma temperatura?',
+                options: [
+                    'A) Es saturada; los 5,0 g adicionales se depositarán íntegramente en el fondo sin disolverse.',
+                    'B) Es insaturada; aún puede disolver completamente los 5,0 g adicionales porque el total (26,5 g) sigue siendo inferior al límite de 34,0 g.',
+                    'C) Es sobresaturada; al agregar los 5,0 g adicionales ocurrirá una cristalización masiva.',
+                    'D) Es concentrada al límite; los 5,0 g adicionales provocarán la ebullición inmediata del solvente.'
+                ],
+                correct: 1, visual: 'unsaturated_beaker', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Equilibrio Dinámico en Solución Saturada', competency: 'Explicación de fenómenos',
+                context: 'Un recipiente cerrado a 25 °C contiene una solución acuosa saturada de sulfato de cobre (II) en contacto con 15 g de cristales sólidos de CuSO₄ depositados en el fondo.',
+                question: 'A nivel submicroscópico, la masa del sólido en el fondo permanece constante a lo largo del tiempo porque:',
+                options: [
+                    'A) El movimiento térmico de los iones cesa por completo al alcanzarse la saturación.',
+                    'B) La velocidad con la que los iones abandonan el cristal (disolución) iguala exactamente a la velocidad con la que los iones en solución se depositan en el cristal (recristalización).',
+                    'C) El agua forma una película impermeable sobre el precipitado que bloquea el contacto iónico.',
+                    'D) El exceso de soluto se sublima directamente hacia la fase gaseosa superior.'
+                ],
+                correct: 1, visual: 'dynamic_eq_beaker', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Soluciones Sobresaturadas', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'La solubilidad del tiosulfato de sodio (Na₂S₂O₃) a 20 °C es de 70 g / 100 g H₂O. Se disuelven 115 g de dicha sal en 100 g de agua a 75 °C y luego se enfría cuidadosamente hasta 20 °C sin vibraciones, observándose una única fase líquida homogénea sin cristales.',
+                question: 'Este sistema físico-químico a 20 °C se define como:',
+                options: [
+                    'A) Una solución insaturada estable que ha aumentado su constante dieléctrica.',
+                    'B) Una solución sobresaturada en equilibrio metaestable, que retiene en disolución 45 g más de soluto que el valor normal de saturación.',
+                    'C) Una suspensión coloidal donde la sal se ha descompuesto en azufre elemental.',
+                    'D) Una solución saturada ideal exenta de fuerzas intermoleculares.'
+                ],
+                correct: 1, visual: 'supersaturated_state', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Nucleación y Cristalización', competency: 'Indagación',
+                context: 'Si al matraz con la solución sobresaturada de tiosulfato de sodio (115 g disueltos en 100 g de H₂O a 20 °C) se le deja caer un microcristal semilla de la misma sal:',
+                question: '¿Qué fenómeno se observará experimentalmente tras alcanzar el equilibrio a 20 °C?',
+                options: [
+                    'A) El microcristal semilla se disolverá aumentando la concentración a 116 g / 100 g H₂O.',
+                    'B) Cristalizarán rápidamente 45 g de exceso de soluto alrededor del germen, quedando el líquido sobrenadante como una solución exactamente saturada con 70 g disueltos.',
+                    'C) Precipitarán los 115 g completos de sal dejando únicamente agua pura en el matraz.',
+                    'D) La solución absorberá calor congelando el agua alrededor del cristal.'
+                ],
+                correct: 1, visual: 'nucleation_process', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Temperatura y Solubilidad Endotérmica', competency: 'Explicación de fenómenos',
+                context: 'En el proceso: KNO₃(s) + Calor ⇌ K⁺(ac) + NO₃⁻(ac), la disolución es marcadamente endotérmica (ΔH > 0).',
+                question: 'De acuerdo con el Principio de Le Chatelier, al suministrar energía térmica calentando el sistema de 20 °C a 70 °C:',
+                options: [
+                    'A) El equilibrio se desplaza hacia la izquierda, precipitando nitrato de potasio sólido.',
+                    'B) El equilibrio se desplaza hacia la derecha (productos), incrementando notablemente la solubilidad de la sal.',
+                    'C) La constante de equilibrio permanece invariable porque los sólidos no dependen de la temperatura.',
+                    'D) Los iones nitrato se reducen a nitrógeno gaseoso escapando del recipiente.'
+                ],
+                correct: 1, visual: 'curve_kno3_steep', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Disolución Exotérmica Anómala', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'A diferencia de la mayoría de las sales, el sulfato de litio (Li₂SO₄) y el sulfato de cerio (III), Ce₂(SO₄)₃, liberan calor al disolverse en agua (ΔH_disolución < 0).',
+                question: 'Si se tiene una solución saturada de Ce₂(SO₄)₃ a 15 °C y se calienta hasta 85 °C, ¿qué ocurrirá en el interior del recipiente?',
+                options: [
+                    'A) La sal incrementará su solubilidad al doble por el aumento de agitación térmica.',
+                    'B) Disminuirá su solubilidad y se observará la precipitación de cristales sólidos en el fondo al calentar.',
+                    'C) La solución pasará de saturada a insaturada sin cambiar su concentración.',
+                    'D) El solvente se solidificará formando un hidrato cristalino a alta temperatura.'
+                ],
+                correct: 1, visual: 'curve_cerium_exo', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Solubilidad de Gases vs Temperatura', competency: 'Explicación de fenómenos',
+                context: 'Un biólogo marino mide la concentración de oxígeno disuelto (O₂) en aguas superficiales oceánicas: en zonas polares (2 °C) registra 13,8 mg/L, mientras que en mares tropicales (28 °C) registra apenas 7,8 mg/L.',
+                question: '¿Por qué el incremento de temperatura reduce la solubilidad de los gases en el agua?',
+                options: [
+                    'A) Porque el calor incrementa la energía cinética traslacional de las moléculas de gas, permitiéndoles vencer las débiles atracciones dipolo-dipolo inducido y escapar a la atmósfera.',
+                    'B) Porque a mayor temperatura el agua disminuye su volumen comprimiendo las burbujas.',
+                    'C) Porque las moléculas de oxígeno reaccionan con las sales marinas formando óxidos insolubles.',
+                    'D) Porque la presión atmosférica en el trópico es nula al nivel del mar.'
+                ],
+                correct: 0, visual: 'gas_solubility_temp', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Ley de Henry y Presión Parcial', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'La Ley de Henry se expresa como S_g = k_H · P_g. A 25 °C, la solubilidad del CO₂ en agua es de 0,145 g/100 mL cuando la presión parcial de CO₂ es de 1,0 atm.',
+                question: 'Si en una planta embotelladora se inyecta CO₂ hasta una presión parcial de 3,0 atm manteniendo la temperatura constante a 25 °C, la nueva solubilidad del gas será:',
+                options: [
+                    'A) 0,048 g / 100 mL de agua.',
+                    'B) 0,145 g / 100 mL de agua (no cambia).',
+                    'C) 0,435 g / 100 mL de agua (0,145 × 3).',
+                    'D) 1,305 g / 100 mL de agua.'
+                ],
+                correct: 2, visual: 'henry_piston', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Fisiología e Hiperbaria (Ley de Henry)', competency: 'Explicación de fenómenos',
+                context: 'Durante una inmersión a 40 metros de profundidad (presión total = 5 atm), el nitrógeno (N₂) del aire comprimido se disuelve en el plasma sanguíneo y tejidos del buzo en una concentración 5 veces mayor que en la superficie.',
+                question: '¿Por qué es peligroso realizar un ascenso rápido hacia la superficie (1 atm)?',
+                options: [
+                    'A) Porque el nitrógeno disuelto reacciona con la hemoglobina transformándola en metahemoglobina.',
+                    'B) Porque la caída brusca de presión reduce abruptamente la solubilidad del N₂, haciendo que salga de la solución en forma de burbujas intravasculares (embolia gaseosa).',
+                    'C) Porque la temperatura corporal cae por debajo del punto de congelación del plasma.',
+                    'D) Porque el oxígeno se vuelve insoluble a altas presiones provocando hipoxia en el fondo.'
+                ],
+                correct: 1, visual: 'diving_henry', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Polaridad y Fuerzas Intermoleculares', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'El principio de miscibilidad química establece que sustancias con fuerzas intermoleculares de magnitud y naturaleza semejante son solubles entre sí.',
+                question: 'Observa el modelo 3D y selecciona el par de sustancias que formará una solución homogénea en cualquier proporción:',
+                options: [
+                    'A) Yodo molecular sólido (I₂, apolar) en Agua líquida (H₂O, polar).',
+                    'B) Metanol (CH₃OH, polar con puente de hidrógeno) en Agua líquida (H₂O, polar).',
+                    'C) Cloruro de potasio (KCl, iónico) en Benceno líquido (C₆H₆, apolar).',
+                    'D) Gas metano (CH₄, apolar) en Mercurio metálico líquido (Hg).'
+                ],
+                correct: 1, visual: '3d_polarity_match', use3D: true
+            },
+            {
+                type: 'closed', subtopic: 'Cinética de Disolución vs Solubilidad', competency: 'Indagación',
+                context: 'Dos estudiantes disuelven 20 g de sulfato de cobre en 100 mL de agua a 25 °C (solubilidad = 22 g/100 mL). El Estudiante 1 usa un cristal grande sin agitar; el Estudiante 2 pulveriza el cristal en un mortero y agita con varilla de vidrio.',
+                question: 'Al comparar ambos sistemas una vez que ambos logran disolver los 20 g por completo, es correcto afirmar que:',
+                options: [
+                    'A) El Estudiante 2 aumentó la solubilidad máxima del sulfato de cobre a 40 g/100 mL.',
+                    'B) La pulverización y agitación incrementaron únicamente la velocidad de disolución (tiempo en alcanzar el equilibrio), pero la concentración final es idéntica en ambos vasos.',
+                    'C) El vaso del Estudiante 1 quedó sobresaturado y el del Estudiante 2 quedó insaturado.',
+                    'D) La agitación mecánica redujo el peso molecular del soluto a la mitad.'
+                ],
+                correct: 1, visual: 'kinetics_surface', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Interpretación de Curva de Solubilidad', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'En la curva de solubilidad del nitrato de sodio (NaNO₃), a 30 °C la solubilidad reportada es exactamente de 96 g de NaNO₃ por cada 100 g de agua.',
+                question: '¿Qué masa máxima de NaNO₃ se podrá disolver en un reactor que contiene 250 g de agua pura mantenida a 30 °C?',
+                options: [
+                    'A) 96 g de NaNO₃.',
+                    'B) 192 g de NaNO₃.',
+                    'C) 240 g de NaNO₃ (96 g × 2,5).',
+                    'D) 346 g de NaNO₃.'
+                ],
+                correct: 2, visual: 'curve_nano3_calc', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Regiones del Diagrama de Solubilidad', competency: 'Explicación de fenómenos',
+                context: 'En un diagrama cartesiano de Solubilidad (eje Y) contra Temperatura (eje X), se grafican tres puntos experimentales (P, Q y R) para una misma sal: P está debajo de la curva, Q está exactamente sobre la línea de la curva y R está por encima de la curva (sin precipitado).',
+                question: 'Los estados P, Q y R corresponden respectivamente a soluciones:',
+                options: [
+                    'A) P: Sobresaturada | Q: Insaturada | R: Saturada.',
+                    'B) P: Insaturada | Q: Saturada | R: Sobresaturada.',
+                    'C) P: Saturada | Q: Sobresaturada | R: Insaturada.',
+                    'D) P: Coloidal | Q: Heterogénea | R: Diluida.'
+                ],
+                correct: 1, visual: 'curve_zones_pqr', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Precipitación por Enfriamiento', competency: 'Indagación',
+                context: 'La solubilidad del clorato de potasio (KClO₃) es de 50 g / 100 g H₂O a 90 °C y de 10 g / 100 g H₂O a 30 °C. Se prepara una solución saturada con 100 g de agua a 90 °C y se enfría hasta 30 °C.',
+                question: '¿Cuántos gramos de KClO₃ cristalizan en el fondo del vaso y cuántos gramos permanecen disueltos en el líquido a 30 °C?',
+                options: [
+                    'A) Cristalizan 10 g y permanecen disueltos 40 g.',
+                    'B) Cristalizan 40 g y permanecen disueltos 10 g.',
+                    'C) Cristalizan 50 g y quedan 0 g disueltos.',
+                    'D) Cristalizan 25 g y permanecen disueltos 25 g.'
+                ],
+                correct: 1, visual: 'cooling_precipitate', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Pendiente de Curvas: NaCl vs KNO₃', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'Entre 0 °C y 100 °C, la solubilidad del NaCl pasa de 35,7 g a 39,8 g / 100 g H₂O, mientras que la del KNO₃ pasa de 13,3 g a 246,0 g / 100 g H₂O.',
+                question: 'Si se requiere purificar una muestra de KNO₃ contaminada con pequeñas cantidades de NaCl mediante el método de recristalización por enfriamiento, este método es altamente eficaz porque:',
+                options: [
+                    'A) Al enfriar la solución caliente, el KNO₃ experimenta una caída abrupta de solubilidad y cristaliza masivamente, mientras que el NaCl permanece casi totalmente disuelto.',
+                    'B) El NaCl se evapora junto con el vapor de agua durante el calentamiento.',
+                    'C) El KNO₃ es insoluble en agua caliente y se filtra en seco.',
+                    'D) Ambas sales reaccionan formando cloruro de potasio gaseoso.'
+                ],
+                correct: 0, visual: 'recrystallization_chart', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Escalamiento Estequiométrico en Soluciones', competency: 'Indagación',
+                context: 'A 60 °C, la solubilidad del bromuro de potasio (KBr) es de 85 g / 100 g H₂O, y a 20 °C es de 65 g / 100 g H₂O. Un ingeniero químico enfría de 60 °C a 20 °C una solución saturada preparada con 400 g de agua.',
+                question: '¿Qué masa total de cristales de KBr cosechará en el cristalizador industrial?',
+                options: [
+                    'A) 20 g de KBr.',
+                    'B) 60 g de KBr.',
+                    'C) 80 g de KBr ((85 - 65) × 4).',
+                    'D) 340 g de KBr.'
+                ],
+                correct: 2, visual: 'industrial_crystallizer', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Adición con Exceso de Soluto', competency: 'Explicación de fenómenos',
+                context: 'A 40 °C la solubilidad del sulfato de potasio (K₂SO₄) es de 15 g / 100 g de agua. Un estudiante vierte 28 g de K₂SO₄ en 100 g de agua a 40 °C, agita durante 10 minutos y filtra la mezcla con papel filtro.',
+                question: '¿Cuál será la masa total de la solución filtrada (líquido que atraviesa el filtro) y qué masa de sólido quedará retenida en el papel filtro?',
+                options: [
+                    'A) Solución filtrada: 128 g | Sólido en filtro: 0 g.',
+                    'B) Solución filtrada: 115 g (100 g H₂O + 15 g sal) | Sólido retenido en filtro: 13 g.',
+                    'C) Solución filtrada: 100 g | Sólido retenido en filtro: 28 g.',
+                    'D) Solución filtrada: 85 g | Sólido retenido en filtro: 15 g.'
+                ],
+                correct: 1, visual: 'filtration_mass', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Punto de Cruce entre Dos Curvas', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'En una gráfica de solubilidad conjunta, la curva de la sal X (pendiente positiva) y la curva de la sal Y (pendiente levemente negativa) se cruzan exactamente a los 38 °C en el valor de 42 g / 100 g H₂O.',
+                question: 'A partir de este gráfico, es válido afirmar que:',
+                options: [
+                    'A) A temperaturas mayores de 38 °C, la sal Y es más soluble que la sal X.',
+                    'B) Exactamente a 38 °C, las soluciones saturadas de X y de Y tienen la misma concentración porcentual en masa.',
+                    'C) A 38 °C ambas sales pierden su carácter electrolítico.',
+                    'D) Por debajo de 38 °C ninguna de las dos sales puede disolverse en agua.'
+                ],
+                correct: 1, visual: 'crossover_curves', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Dilución de Solución Saturada', competency: 'Indagación',
+                context: 'La solubilidad de una sal M a 25 °C es de 40 g / 100 g de agua. Se tiene un vaso con 100 g de agua a 25 °C al que se le agregaron 52 g de la sal M (quedando 40 g disueltos y 12 g precipitados en el fondo).',
+                question: '¿Cuántos gramos mínimos de agua pura adicional a 25 °C se deben agregar al vaso para lograr que los 12 g de precipitado se disuelvan exactamente?',
+                options: [
+                    'A) 12 g de agua adicional.',
+                    'B) 30 g de agua adicional (ya que 12 g / 0,40 g/g = 30 g H₂O).',
+                    'C) 50 g de agua adicional.',
+                    'D) 100 g de agua adicional.'
+                ],
+                correct: 1, visual: 'water_addition_calc', use3D: false
+            },
+            {
+                type: 'closed', subtopic: 'Incompresibilidad en Soluciones Sólido-Líquido', competency: 'Explicación de fenómenos',
+                context: 'En un reactor presurizado se estudia la solubilidad del cloruro de bario sólido (BaCl₂) en agua líquida a 25 °C. Al incrementar la presión del reactor desde 1 atm hasta 80 atm:',
+                question: '¿Qué efecto se observa sobre la solubilidad del BaCl₂ y cuál es su causa física?',
+                options: [
+                    'A) Se multiplica por 80 en cumplimiento directo de la Ley de Henry.',
+                    'B) Permanece prácticamente inalterada debido a que las fases condensadas (sólidos y líquidos) tienen coeficientes de compresibilidad despreciables.',
+                    'C) Disminuye a cero porque la presión impide la disociación iónica.',
+                    'D) El agua se transforma en hielo a 25 °C precipitando toda la sal.'
+                ],
+                correct: 1, visual: 'pressure_solid_liquid', use3D: false
+            },
+
+            // ==========================================
+            // 5 PREGUNTAS ABIERTAS (7.0 MINUTOS C/U)
+            // ==========================================
+            {
+                type: 'open', subtopic: 'Termodinámica Comparada: Gases vs Sólidos Iónicos', competency: 'Explicación de fenómenos',
+                context: 'Al aumentar la temperatura del agua de 10 °C a 60 °C, la solubilidad del nitrato de potasio sólido (KNO₃) se cuadruplica, mientras que la solubilidad del oxígeno gaseoso (O₂) cae a menos de la mitad.',
+                question: 'Explica detalladamente (mínimo 4 líneas / 28 palabras) las diferencias termodinámicas (entalpía ΔH y entropía ΔS) y de fuerzas intermoleculares que justifican este comportamiento opuesto entre solutos sólidos cristalinos y solutos gaseosos.',
+                visual: 'open_thermo_comparison', use3D: false
+            },
+            {
+                type: 'open', subtopic: 'Balance de Masa en Cristalización Industrial', competency: 'Indagación y Resolución de Problemas',
+                context: 'La solubilidad del sulfato de cobre pentahidratado en agua es de 110 g / 100 g H₂O a 80 °C y de 30 g / 100 g H₂O a 20 °C. Un tanque industrial contiene una solución saturada preparada con 500 g de agua a 80 °C.',
+                question: 'Calcula y explica paso a paso: 1) La masa de soluto disuelta inicialmente a 80 °C en los 500 g de agua; 2) La masa que permanece disuelta al enfriar a 20 °C; y 3) La masa de cristales precipitados, describiendo qué estado de saturación conserva el líquido sobrenadante.',
+                visual: 'open_crystallizer_math', use3D: false
+            },
+            {
+                type: 'open', subtopic: 'Interacciones Moleculares y Regla de Similitud', competency: 'Uso comprensivo del conocimiento científico',
+                context: 'En el laboratorio se tienen tres sustancias: Agua (H₂O), Hexano (C₆H₁₄) y Cloruro de Sodio (NaCl). El NaCl se disuelve fácilmente en agua pero es totalmente insoluble en hexano.',
+                question: 'Argumenta a nivel molecular (puentes de hidrógeno, interacciones ion-dipolo y fuerzas de dispersión de London) por qué el agua logra vencer la elevada energía reticular del cristal de NaCl mientras que el hexano apolar es incapaz de solvatar dichos iones.',
+                visual: '3d_solvation_ion', use3D: true
+            },
+            {
+                type: 'open', subtopic: 'Física y Química del Estado Sobresaturado', competency: 'Indagación Experimental',
+                context: 'Una solución sobresaturada de acetato de sodio a temperatura ambiente permanece líquida hasta que se toca con la punta de una varilla o se añade un cristal semilla, liberando calor y solidificándose en segundos.',
+                question: 'Describe el protocolo térmico exacto para producir esta solución en el laboratorio, explica qué significa que sea un estado "metaestable" y por qué la cristalización repentina libera energía térmica al entorno (signo de ΔH de cristalización).',
+                visual: 'open_supersat_heat', use3D: false
+            },
+            {
+                type: 'open', subtopic: 'Ecología Acuática y Contaminación Térmica', competency: 'Ciencia, Tecnología y Sociedad',
+                context: 'Una central termoeléctrica vierte agua de enfriamiento a 36 °C sobre un río cuya temperatura natural es de 18 °C. Días después se reporta una mortandad masiva de truchas a pesar de que el agua vertida no contenía sustancias químicas tóxicas.',
+                question: 'Integra los conceptos de solubilidad de gases en función de la temperatura y la tasa metabólica de organismos ectotermos (peces) para explicar científicamente la causa de muerte por hipoxia en el ecosistema fluvial.',
+                visual: 'open_river_ecology', use3D: false
+            }
+        ];
+
+        /* =========================================================================
+           3. GENERADOR DEL BANNER INSTITUCIONAL OFICIAL EN ALTA DEFINICIÓN
+           ========================================================================= */
+        function generateOfficialBannerDataURL() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200;
+            canvas.height = 260;
+            const ctx = canvas.getContext('2d');
+
+            const grad = ctx.createLinearGradient(0, 0, 1200, 260);
+            grad.addColorStop(0, '#040d1a');
+            grad.addColorStop(0.5, '#081b38');
+            grad.addColorStop(1, '#102f5e');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 1200, 260);
+
+            // Malla geométrica decorativa
+            ctx.strokeStyle = 'rgba(223, 178, 53, 0.08)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < 1200; x += 50) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 80, 260); ctx.stroke();
+            }
+
+            // Marco dorado doble
+            ctx.strokeStyle = '#dfb235';
+            ctx.lineWidth = 5;
+            ctx.strokeRect(10, 10, 1180, 240);
+            ctx.strokeStyle = 'rgba(223, 178, 53, 0.35)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(18, 18, 1164, 224);
+
+            // Escudo Institucional Izquierdo
+            ctx.save();
+            ctx.translate(105, 130);
+            ctx.beginPath();
+            ctx.arc(0, 0, 68, 0, Math.PI * 2);
+            ctx.fillStyle = '#051124';
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#dfb235';
+            ctx.stroke();
+
+            // Haz luminoso del Faro
+            const beam = ctx.createRadialGradient(0, -25, 2, 0, -25, 65);
+            beam.addColorStop(0, 'rgba(255, 240, 150, 0.9)');
+            beam.addColorStop(1, 'rgba(223, 178, 53, 0)');
+            ctx.fillStyle = beam;
+            ctx.beginPath();
+            ctx.moveTo(0, -25); ctx.lineTo(-58, -50); ctx.lineTo(-58, 0); ctx.closePath(); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(0, -25); ctx.lineTo(58, -50); ctx.lineTo(58, 0); ctx.closePath(); ctx.fill();
+
+            // Torre del Faro
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath();
+            ctx.moveTo(-16, 42); ctx.lineTo(16, 42); ctx.lineTo(10, -20); ctx.lineTo(-10, -20);
+            ctx.closePath(); ctx.fill();
+            ctx.fillStyle = '#c89d28';
+            ctx.fillRect(-13, 5, 26, 10);
+            ctx.beginPath(); ctx.arc(0, -24, 11, Math.PI, 0); ctx.fill();
+            ctx.restore();
+
+            // Textos Centrales
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#dfb235';
+            ctx.font = '700 15px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('GIMNASIO CRISTIANO FARO DE LUZ • THE LIGHTHOUSE SCHOOL', 630, 55);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '800 31px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('EVALUACIÓN DE QUÍMICA • GRADO DÉCIMO (10°)', 630, 100);
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = '700 19px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('SOLUCIONES, SOLUTO, SOLVENTE Y CURVAS DE SOLUBILIDAD', 630, 138);
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = '600 15px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText('Docente: Cristian David Ayazo • Ciencias Naturales y Educación Ambiental', 630, 178);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 12px "JetBrains Mono", monospace';
+            ctx.fillText('FORMATO OFICIAL: F-GA2-004 | VERSIÓN: 2 | SUPERVISIÓN ACTIVA FIREBASE', 630, 218);
+
+            return canvas.toDataURL('image/png');
+        }
+
+        /* =========================================================================
+           4. GENERADOR DE LÁMINAS CIENTÍFICAS HD (900x600 px) CON ILUMINACIÓN REALISTA
+           ========================================================================= */
+        function generateHighResScientificPNG(visualKey, subtopic, qNumber) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 900;
+            canvas.height = 600;
+            const ctx = canvas.getContext('2d');
+
+            // Fondo radial profundo de laboratorio
+            const bgGrad = ctx.createRadialGradient(450, 300, 50, 450, 300, 600);
+            bgGrad.addColorStop(0, '#0d2549');
+            bgGrad.addColorStop(0.6, '#07162c');
+            bgGrad.addColorStop(1, '#030914');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, 900, 600);
+
+            // Retícula científica de precisión
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.06)';
+            ctx.lineWidth = 1;
+            for (let x = 30; x < 900; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 600); ctx.stroke(); }
+            for (let y = 30; y < 600; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(900, y); ctx.stroke(); }
+
+            // Marco externo con esquinas técnicas
+            ctx.strokeStyle = 'rgba(223, 178, 53, 0.55)';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(18, 18, 864, 564);
+
+            // Cabecera de la lámina
+            ctx.fillStyle = 'rgba(4, 13, 26, 0.85)';
+            ctx.fillRect(20, 20, 860, 62);
+            ctx.strokeStyle = 'rgba(223, 178, 53, 0.3)';
+            ctx.beginPath(); ctx.moveTo(20, 82); ctx.lineTo(880, 82); ctx.stroke();
+
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#dfb235';
+            ctx.font = '800 18px "Plus Jakarta Sans", sans-serif';
+            ctx.fillText(`LÁMINA EXPERIMENTAL #${qNumber} • ${subtopic.toUpperCase()}`, 40, 48);
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = '600 12px "JetBrains Mono", monospace';
+            ctx.fillText('GIMNASIO CRISTIANO FARO DE LUZ • LABORATORIO ANALÍTICO DE QUÍMICA 10°', 40, 68);
+
+            // Selección de gráfico específico de alta calidad
+            if (visualKey.includes('curve') || visualKey.includes('recrystallization') || visualKey.includes('crossover') || visualKey.includes('cooling')) {
+                renderHDGraphCurve(ctx, visualKey);
+            } else if (visualKey.includes('henry') || visualKey.includes('gas') || visualKey.includes('diving') || visualKey.includes('river')) {
+                renderHDGasAndPressure(ctx, visualKey);
+            } else if (visualKey.includes('enthalpy') || visualKey.includes('thermo') || visualKey.includes('supersat')) {
+                renderHDThermoDiagram(ctx, visualKey);
+            } else {
+                renderHDGlasswareSystem(ctx, visualKey);
+            }
+
+            return canvas.toDataURL('image/png');
+        }
+
+        function renderHDGraphCurve(ctx, key) {
+            const ox = 130, oy = 510, w = 680, h = 370;
+
+            // Fondo del plano cartesiano
+            ctx.fillStyle = 'rgba(3, 9, 20, 0.65)';
+            ctx.fillRect(ox, oy - h, w, h);
+
+            // Líneas guía horizontales y verticales
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                let x = ox + (i * w / 10);
+                ctx.beginPath(); ctx.moveTo(x, oy); ctx.lineTo(x, oy - h); ctx.stroke();
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '600 12px "JetBrains Mono"';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${i * 10}°C`, x, oy + 24);
+            }
+            for (let j = 0; j <= 7; j++) {
+                let y = oy - (j * h / 7);
+                ctx.beginPath(); ctx.moveTo(ox, y); ctx.lineTo(ox + w, y); ctx.stroke();
+                ctx.fillStyle = '#94a3b8';
+                ctx.textAlign = 'right';
+                ctx.fillText(`${j * 20}g`, ox - 12, y + 4);
+            }
+
+            // Ejes principales
+            ctx.strokeStyle = '#f8fafc';
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(ox, oy - h); ctx.lineTo(ox, oy); ctx.lineTo(ox + w, oy); ctx.stroke();
+
+            // Títulos de ejes
+            ctx.fillStyle = '#dfb235';
+            ctx.font = '700 15px "Plus Jakarta Sans"';
+            ctx.textAlign = 'center';
+            ctx.fillText('TEMPERATURA DEL SISTEMA (°C)', ox + w / 2, oy + 52);
+
+            ctx.save();
+            ctx.translate(55, oy - h / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('SOLUBILIDAD (g Soluto / 100 g H₂O)', 0, 0);
+            ctx.restore();
+
+            // Curva 1: KNO3 / NaNO3 (Ascendente pronunciada con resplandor)
+            ctx.save();
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 12;
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 4.5;
+            ctx.beginPath();
+            ctx.moveTo(ox, oy - (14 / 140) * h);
+            ctx.bezierCurveTo(ox + 220, oy - (35 / 140) * h, ox + 420, oy - (85 / 140) * h, ox + 580, oy - (138 / 140) * h);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.fillStyle = '#38bdf8';
+            ctx.font = '800 14px "JetBrains Mono"';
+            ctx.textAlign = 'left';
+            ctx.fillText('KNO₃ / NaNO₃ (ΔH > 0)', ox + 430, oy - h + 45);
+
+            // Curva 2: NaCl (Casi horizontal)
+            ctx.save();
+            ctx.shadowColor = '#fbbf24';
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(ox, oy - (36 / 140) * h);
+            ctx.lineTo(ox + w, oy - (40 / 140) * h);
+            ctx.stroke();
+            ctx.restore();
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillText('NaCl (Pendiente ~0)', ox + 510, oy - (40 / 140) * h - 12);
+
+            // Curva 3: Ce2(SO4)3 (Exotérmica descendente)
+            ctx.save();
+            ctx.shadowColor = '#f43f5e';
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(ox, oy - (52 / 140) * h);
+            ctx.bezierCurveTo(ox + 200, oy - (22 / 140) * h, ox + 400, oy - (10 / 140) * h, ox + w, oy - (4 / 140) * h);
+            ctx.stroke();
+            ctx.restore();
+            ctx.fillStyle = '#f43f5e';
+            ctx.fillText('Ce₂(SO₄)₃ / Sal Y (ΔH < 0)', ox + 440, oy - 25);
+
+            // Puntos P, Q, R o Intersección
+            const drawNode = (x, y, label, color) => {
+                ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2);
+                ctx.fillStyle = color; ctx.fill();
+                ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+                ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px "Plus Jakarta Sans"';
+                ctx.fillText(label, x + 12, y + 4);
+            };
+            drawNode(ox + 272, oy - (88 / 140) * h, 'R (Región Sobresaturada)', '#f43f5e');
+            drawNode(ox + 272, oy - (54 / 140) * h, 'Q (Equilibrio Saturado)', '#dfb235');
+            drawNode(ox + 272, oy - (24 / 140) * h, 'P (Región Insaturada)', '#10b981');
+        }
+
+        function renderHDGlasswareSystem(ctx, key) {
+            // Dibujar 2 matraces/vasos de precipitados fotorrealistas comparativos
+            const drawRealisticBeaker = (cx, cy, title, sub, fillColor, crystalsCount, particlesCount) => {
+                // Sombra base
+                ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                ctx.beginPath(); ctx.ellipse(cx, cy + 155, 115, 16, 0, 0, Math.PI * 2); ctx.fill();
+
+                // Líquido con gradiente volumétrico
+                const liqGrad = ctx.createLinearGradient(cx - 100, cy - 40, cx + 100, cy + 150);
+                liqGrad.addColorStop(0, fillColor[0]);
+                liqGrad.addColorStop(1, fillColor[1]);
+                ctx.fillStyle = liqGrad;
+                ctx.fillRect(cx - 100, cy - 30, 200, 178);
+
+                // Menisco superior del líquido
+                ctx.beginPath(); ctx.ellipse(cx, cy - 30, 100, 10, 0, 0, Math.PI * 2);
+                ctx.fillStyle = fillColor[0]; ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+                // Partículas disueltas (solvatadas)
+                for (let i = 0; i < particlesCount; i++) {
+                    const px = cx - 80 + (Math.sin(i * 7.3) * 0.5 + 0.5) * 160;
+                    const py = cy - 10 + (Math.cos(i * 4.1) * 0.5 + 0.5) * 130;
+                    ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#fef08a'; ctx.fill();
+                }
+
+                // Cristales precipitados en el fondo
+                for (let c = 0; c < crystalsCount; c++) {
+                    const rx = cx - 75 + (c * 11) % 150;
+                    const ry = cy + 128 + (c % 3) * 6;
+                    ctx.fillStyle = '#dfb235';
+                    ctx.beginPath();
+                    ctx.moveTo(rx, ry); ctx.lineTo(rx + 9, ry - 7); ctx.lineTo(rx + 14, ry + 4); ctx.closePath();
+                    ctx.fill();
+                }
+
+                // Contorno de vidrio borosilicato con brillo especular
+                ctx.strokeStyle = 'rgba(226, 232, 240, 0.85)';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(cx - 102, cy - 120, 204, 270);
+
+                // Brillo lateral del cristal
+                const shine = ctx.createLinearGradient(cx - 92, 0, cx - 70, 0);
+                shine.addColorStop(0, 'rgba(255,255,255,0.28)');
+                shine.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.fillStyle = shine;
+                ctx.fillRect(cx - 92, cy - 115, 22, 260);
+
+                // Graduaciones volumétricas en mL
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.font = '600 10px "JetBrains Mono"';
+                ctx.textAlign = 'right';
+                [100, 200, 300].forEach((ml, idx) => {
+                    let my = cy + 100 - idx * 55;
+                    ctx.fillRect(cx + 70, my, 20, 1.5);
+                    ctx.fillText(`${ml} mL`, cx + 65, my + 4);
+                });
+
+                // Etiquetas inferiores
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '800 16px "Plus Jakarta Sans"';
+                ctx.fillText(title, cx, cy + 195);
+                ctx.fillStyle = '#38bdf8';
+                ctx.font = '600 12px "JetBrains Mono"';
+                ctx.fillText(sub, cx, cy + 215);
+            };
+
+            drawRealisticBeaker(250, 270, 'SISTEMA I: FASE HOMOGÉNEA', 'Solución Insaturada / Saturada', ['rgba(14, 165, 233, 0.45)', 'rgba(3, 105, 161, 0.75)'], 0, 22);
+            drawRealisticBeaker(650, 270, 'SISTEMA II: EQUILIBRIO MULTIFÁSICO', 'Con Exceso de Soluto Precipitado', ['rgba(16, 185, 129, 0.45)', 'rgba(4, 120, 87, 0.8)'], 28, 35);
+        }
+
+        function renderHDGasAndPressure(ctx, key) {
+            // Ilustración de Émbolo de Ley de Henry (P1 vs P2)
+            const drawCylinder = (cx, cy, pressureLabel, pistonY, gasDots, dissolvedDots) => {
+                // Cilindro metálico/vidrio
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                ctx.fillRect(cx - 95, cy - 140, 190, 280);
+
+                // Fase Líquida inferior
+                const liq = ctx.createLinearGradient(0, cy + 10, 0, cy + 140);
+                liq.addColorStop(0, 'rgba(6, 182, 212, 0.55)');
+                liq.addColorStop(1, 'rgba(30, 58, 138, 0.85)');
+                ctx.fillStyle = liq;
+                ctx.fillRect(cx - 93, cy + 10, 186, 128);
+
+                // Émbolo móvil superior
+                ctx.fillStyle = '#c89d28';
+                ctx.fillRect(cx - 93, pistonY, 186, 22);
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillRect(cx - 12, cy - 170, 24, pistonY - (cy - 170));
+
+                // Moléculas en fase gaseosa
+                for (let i = 0; i < gasDots; i++) {
+                    let gx = cx - 75 + ((i * 37) % 150);
+                    let gy = pistonY + 32 + ((i * 23) % Math.max(15, (cy - pistonY - 30)));
+                    ctx.beginPath(); ctx.arc(gx, gy, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#f43f5e'; ctx.fill();
+                }
+
+                // Moléculas de gas disueltas en el líquido
+                for (let j = 0; j < dissolvedDots; j++) {
+                    let dx = cx - 75 + ((j * 43) % 150);
+                    let dy = cy + 25 + ((j * 29) % 100);
+                    ctx.beginPath(); ctx.arc(dx, dy, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = '#38bdf8'; ctx.fill();
+                    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.stroke();
+                }
+
+                ctx.strokeStyle = '#e2e8f0';
+                ctx.lineWidth = 3.5;
+                ctx.strokeRect(cx - 95, cy - 140, 190, 280);
+
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#dfb235';
+                ctx.font = '800 16px "Plus Jakarta Sans"';
+                ctx.fillText(pressureLabel, cx, cy + 175);
+            };
+
+            drawCylinder(260, 290, 'ESTADO 1: P₁ = 1,0 atm (Baja Solubilidad)', 185, 10, 8);
+            drawCylinder(640, 290, 'ESTADO 2: P₂ = 3,0 atm (Alta Solubilidad)', 245, 22, 26);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '700 15px "JetBrains Mono"';
+            ctx.textAlign = 'center';
+            ctx.fillText('LEY DE HENRY: S_gas = k_H · P_parcial  |  Efecto Térmico: ↑T ➔ ↓Solubilidad Gas', 450, 535);
+        }
+
+        function renderHDThermoDiagram(ctx, key) {
+            // Diagrama Entálpico de 3 Etapas (ΔH1 + ΔH2 + ΔH3)
+            const ox = 120, oy = 480;
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.moveTo(ox, 120); ctx.lineTo(ox, oy); ctx.lineTo(800, oy); ctx.stroke();
+
+            // Nivel 1: Soluto + Solvente separados
+            ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(160, 380); ctx.lineTo(310, 380); ctx.stroke();
+            ctx.fillStyle = '#ffffff'; ctx.font = '700 13px "Plus Jakarta Sans"';
+            ctx.fillText('Soluto(s) + Solvente(l)', 165, 402);
+
+            // Nivel 2: Estado expandido endotérmico (Iones gaseosos)
+            ctx.strokeStyle = '#f43f5e';
+            ctx.beginPath(); ctx.moveTo(380, 165); ctx.lineTo(550, 165); ctx.stroke();
+            ctx.fillText('Iones Separados + Solvente Expandido', 355, 148);
+
+            // Nivel 3: Solución final hidratada
+            ctx.strokeStyle = '#10b981';
+            ctx.beginPath(); ctx.moveTo(610, 285); ctx.lineTo(770, 285); ctx.stroke();
+            ctx.fillText('Solución Hidratada Final', 615, 308);
+
+            // Flechas de transición energética
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.moveTo(280, 380); ctx.lineTo(410, 165); ctx.stroke();
+            ctx.fillStyle = '#fbbf24'; ctx.font = '700 13px "JetBrains Mono"';
+            ctx.fillText('ΔH₁ + ΔH₂ > 0 (Ruptura)', 205, 255);
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.beginPath(); ctx.moveTo(520, 165); ctx.lineTo(640, 285); ctx.stroke();
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillText('ΔH₃ < 0 (Solvatación)', 590, 215);
+
+            ctx.fillStyle = '#dfb235';
+            ctx.font = '800 15px "JetBrains Mono"';
+            ctx.fillText('BALANCE NETO: ΔH_disolución = ΔH₁ + ΔH₂ + ΔH₃', 260, 540);
+        }
+
+        /* =========================================================================
+           5. MOTOR 3D INTERACTIVO (THREE.JS) CON MÚLTIPLES ESCENAS QUÍMICAS
+           ========================================================================= */
+        let threeRenderer = null, threeScene = null, threeCamera = null, threeGroup = null;
+
+        function setupThreeJsScene(mode) {
+            const container = document.getElementById('threeContainer');
+            const canvas = document.getElementById('threeCanvas');
+            if (!container || !canvas) return;
+
+            try {
+                if (!threeRenderer) {
+                    threeScene = new THREE.Scene();
+                    threeCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+                    threeCamera.position.z = 19;
+
+                    threeRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+                    threeRenderer.setSize(container.clientWidth, container.clientHeight);
+                    threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+                    const amb = new THREE.AmbientLight(0xffffff, 0.75);
+                    threeScene.add(amb);
+                    const dir = new THREE.DirectionalLight(0xfff0b3, 1.1);
+                    dir.position.set(12, 18, 15);
+                    threeScene.add(dir);
+
+                    threeGroup = new THREE.Group();
+                    threeScene.add(threeGroup);
+
+                    // Rotación interactiva con puntero
+                    let dragging = false, px = 0, py = 0;
+                    canvas.addEventListener('pointerdown', e => { dragging = true; px = e.clientX; py = e.clientY; });
+                    window.addEventListener('pointerup', () => dragging = false);
+                    window.addEventListener('pointermove', e => {
+                        if (!dragging || !threeGroup) return;
+                        threeGroup.rotation.y += (e.clientX - px) * 0.012;
+                        threeGroup.rotation.x += (e.clientY - py) * 0.012;
+                        px = e.clientX; py = e.clientY;
+                    });
+
+                    const animateLoop = () => {
+                        requestAnimationFrame(animateLoop);
+                        if (!container.classList.contains('hidden') && threeGroup) {
+                            threeGroup.rotation.y += 0.006;
+                            threeRenderer.render(threeScene, threeCamera);
+                        }
+                    };
+                    animateLoop();
+                }
+
+                // Limpiar geometrías previas
+                while (threeGroup.children.length > 0) {
+                    threeGroup.remove(threeGroup.children[0]);
+                }
+
+                // Construir escena según pregunta
+                if (mode === '3d_alloy_lattice') {
+                    // Red cristalina sustitucional Cu (Cobre rojizo) + Zn (Plata azulado)
+                    for (let x = -1; x <= 1; x++) {
+                        for (let y = -1; y <= 1; y++) {
+                            for (let z = -1; z <= 1; z++) {
+                                const isZn = ((x + y + z) % 2 === 0 && x !== 0);
+                                const geom = new THREE.SphereGeometry(isZn ? 1.15 : 1.05, 24, 24);
+                                const mat = new THREE.MeshPhongMaterial({
+                                    color: isZn ? 0x38bdf8 : 0xd97706,
+                                    shininess: 100
+                                });
+                                const atom = new THREE.Mesh(geom, mat);
+                                atom.position.set(x * 3.4, y * 3.4, z * 3.4);
+                                threeGroup.add(atom);
+                            }
+                        }
+                    }
+                } else {
+                    // Esfera de solvatación Ion-Dipolo (Catión Na+ rodeado de moléculas H2O)
+                    const centerIon = new THREE.Mesh(
+                        new THREE.SphereGeometry(2.3, 32, 32),
+                        new THREE.MeshPhongMaterial({ color: 0x8b5cf6, shininess: 100 })
+                    );
+                    threeGroup.add(centerIon);
+
+                    const coords = [
+                        [5, 0, 0], [-5, 0, 0], [0, 5, 0], [0, -5, 0],
+                        [0, 0, 5], [0, 0, -5], [3.4, 3.4, 3.4], [-3.4, -3.4, 3.4]
+                    ];
+                    coords.forEach(c => {
+                        const wMol = new THREE.Group();
+                        const oxy = new THREE.Mesh(
+                            new THREE.SphereGeometry(1.15, 24, 24),
+                            new THREE.MeshPhongMaterial({ color: 0xef4444, shininess: 90 })
+                        );
+                        const hMat = new THREE.MeshPhongMaterial({ color: 0xffffff });
+                        const h1 = new THREE.Mesh(new THREE.SphereGeometry(0.65, 16, 16), hMat);
+                        const h2 = new THREE.Mesh(new THREE.SphereGeometry(0.65, 16, 16), hMat);
+                        h1.position.set(0.85, 0.85, 0);
+                        h2.position.set(-0.85, 0.85, 0);
+                        wMol.add(oxy, h1, h2);
+                        wMol.position.set(c[0], c[1], c[2]);
+                        wMol.lookAt(0, 0, 0);
+                        threeGroup.add(wMol);
+                    });
+                }
+            } catch (e) {
+                container.classList.add('hidden');
+                document.getElementById('hdScientificImg').classList.remove('hidden');
+            }
+        }
+
+        /* =========================================================================
+           6. SINCRONIZACIÓN BIDIRECCIONAL FIREBASE Y RECEPTOR DE COMANDOS REMOTOS
+           ========================================================================= */
+        async function syncWithFirebaseServer() {
+            if (!appState.started || !appState.studentId) return;
+
+            const studentPayload = {
+                studentId: appState.studentId,
+                studentName: appState.studentName,
+                currentQuestion: appState.currentIdx + 1,
+                totalQuestions: QUESTIONS.length,
+                timerRemaining: appState.timerLeft,
+                penalties: appState.penalties,
+                penaltyHistory: appState.penaltyHistory,
+                restrictions: appState.restrictions,
+                isFinished: appState.finished,
+                lastHeartbeat: Date.now()
+            };
+
+            try {
+                // 1. Subir estado actual del estudiante
+                await fetch(`${CONFIG.firebaseUrl}exams/${CONFIG.examId}/students/${appState.studentId}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(studentPayload)
+                });
+
+                // 2. Consultar comandos individuales enviados por el profesor desde docente.html
+                const cmdRes = await fetch(`${CONFIG.firebaseUrl}exams/${CONFIG.examId}/commands/${appState.studentId}.json`);
+                if (cmdRes.ok) {
+                    const cmdData = await cmdRes.json();
+                    if (cmdData && cmdData.action && !cmdData.executed) {
+                        processRemoteTeacherCommand(cmdData);
+                        await fetch(`${CONFIG.firebaseUrl}exams/${CONFIG.examId}/commands/${appState.studentId}.json`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ executed: true, executedAt: Date.now() })
+                        });
+                    }
+                }
+
+                // 3. Consultar comandos globales (Broadcast para todo el salón)
+                const globalRes = await fetch(`${CONFIG.firebaseUrl}exams/${CONFIG.examId}/commands/GLOBAL_BROADCAST.json`);
+                if (globalRes.ok) {
+                    const globalData = await globalRes.json();
+                    if (globalData && globalData.timestamp && (!appState.lastGlobalCmd || globalData.timestamp > appState.lastGlobalCmd)) {
+                        appState.lastGlobalCmd = globalData.timestamp;
+                        processRemoteTeacherCommand(globalData);
+                    }
+                }
+
+                document.getElementById('syncStatusText').textContent = 'EN LÍNEA';
+                document.getElementById('syncStatusText').className = 'text-emerald-400';
+            } catch (err) {
+                document.getElementById('syncStatusText').textContent = 'RESPALDO LOCAL';
+                document.getElementById('syncStatusText').className = 'text-amber-400';
+            }
+
+            saveLocalProgress();
+        }
+
+        function processRemoteTeacherCommand(cmd) {
+            const act = cmd.action;
+            if (act === 'toggle_fullscreen_lock') {
+                appState.restrictions.fullscreenLock = cmd.value;
+                if (!cmd.value) {
+                    document.getElementById('fullscreenLockModal').classList.add('hidden');
+                    document.getElementById('fullscreenLockModal').classList.remove('flex');
+                }
+            } else if (act === 'toggle_tab_penalty') {
+                appState.restrictions.tabSwitchPenalty = cmd.value;
+            } else if (act === 'toggle_sound_penalty') {
+                appState.restrictions.soundMeterPenalty = cmd.value;
+            } else if (act === 'toggle_timer_lock') {
+                appState.restrictions.timerLock = cmd.value;
+                if (!cmd.value) {
+                    appState.timerLeft = 0;
+                    refreshTimerUI();
+                    evaluateNextButtonState();
+                }
+            } else if (act === 'unlock_timer') {
+                appState.timerLeft = 0;
+                refreshTimerUI();
+                evaluateNextButtonState();
+            } else if (act === 'advance_question') {
+                goToNextQuestion();
+            } else if (act === 'jump_open') {
+                renderQuestionByIndex(CONFIG.numClosed);
+            } else if (act === 'reset_penalties') {
+                appState.penalties = 0;
+                appState.penaltyHistory = [];
+                document.getElementById('penaltyBadge').classList.add('hidden');
+            } else if (act === 'add_penalty') {
+                registerInfraction('Sanción directa desde Consola Docente', 0.5);
+            } else if (act === 'force_submit') {
+                finishEvaluation();
+            }
+            saveLocalProgress();
+        }
+
+        function saveLocalProgress() {
+            if (!appState.studentId) return;
+            localStorage.setItem(`faro_quiz_${CONFIG.examId}_${appState.studentId}`, JSON.stringify(appState));
+        }
+
+        /* =========================================================================
+           7. FLUJO DE PREGUNTAS, TEMPORIZADOR Y VALIDACIONES
+           ========================================================================= */
+        function beginExamSession() {
+            const rawName = document.getElementById('studentNameInput').value.trim();
+            if (rawName.split(/\s+/).length < 2) return;
+
+            const normalizedId = rawName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '_');
+            appState.studentId = normalizedId;
+            appState.studentName = rawName;
+
+            // Verificar progreso previo guardado para este estudiante
+            const savedRaw = localStorage.getItem(`faro_quiz_${CONFIG.examId}_${normalizedId}`);
+            if (savedRaw) {
+                try {
+                    const parsed = JSON.parse(savedRaw);
+                    if (!parsed.finished && parsed.currentIdx < QUESTIONS.length) {
+                        appState = { ...appState, ...parsed };
+                    }
+                } catch (e) {}
+            }
+
+            appState.started = true;
+            if (!appState.startTimeStr) appState.startTimeStr = new Date().toLocaleTimeString();
+
+            if (appState.restrictions.fullscreenLock) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+
+            document.getElementById('welcomeView').classList.add('hidden');
+            document.getElementById('examView').classList.remove('hidden');
+            document.getElementById('examView').classList.add('flex');
+
+            renderQuestionByIndex(appState.currentIdx);
+            setInterval(syncWithFirebaseServer, 3000);
+            syncWithFirebaseServer();
+        }
+
+        function renderQuestionByIndex(idx) {
+            if (idx >= QUESTIONS.length) {
+                finishEvaluation();
+                return;
+            }
+
+            appState.currentIdx = idx;
+            const q = QUESTIONS[idx];
+
+            // Animación suave de tarjeta
+            const card = document.getElementById('questionCard');
+            card.classList.remove('animate-question');
+            void card.offsetWidth;
+            card.classList.add('animate-question');
+
+            // Configurar tiempo si no viene de una restauración en la misma pregunta
+            const defaultDuration = (q.type === 'closed') ? CONFIG.closedTime : CONFIG.openTime;
+            appState.timerMax = defaultDuration;
+            appState.timerLeft = appState.restrictions.timerLock ? defaultDuration : 0;
+
+            // Cabeceras y etiquetas
+            document.getElementById('qCounterText').textContent = `Pregunta ${idx + 1} de ${QUESTIONS.length}`;
+            document.getElementById('qTopicText').textContent = `Eje Temático: ${q.subtopic}`;
+            document.getElementById('qCompetency').innerHTML = `Competencia: ${q.competency}`;
+            document.getElementById('qValueTag').textContent = (q.type === 'closed') ? 'Valor: 0.148 pts' : 'Valor: 0.260 pts';
+
+            const badge = document.getElementById('qBadge');
+            if (q.type === 'closed') {
+                badge.textContent = 'PARTE I • CERRADA (1.5 MIN)';
+                badge.className = 'px-3 py-1 rounded-lg font-mono text-xs font-bold bg-gold-500/20 text-gold-300 border border-gold-400/40';
+            } else {
+                badge.textContent = 'PARTE II • ABIERTA (7.0 MIN)';
+                badge.className = 'px-3 py-1 rounded-lg font-mono text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40';
+            }
+
+            // Progreso
+            const pct = Math.round(((idx + 1) / QUESTIONS.length) * 100);
+            document.getElementById('progressPctText').textContent = `${pct}%`;
+            document.getElementById('progressBarFill').style.width = `${pct}%`;
+
+            // Enunciado
+            document.getElementById('qContextParagraph').textContent = q.context;
+            document.getElementById('qStemParagraph').textContent = q.question;
+
+            // Renderizar Lámina HD o Visor 3D
+            const imgEl = document.getElementById('hdScientificImg');
+            const threeEl = document.getElementById('threeContainer');
+
+            if (q.use3D) {
+                imgEl.classList.add('hidden');
+                threeEl.classList.remove('hidden');
+                setupThreeJsScene(q.visual);
+            } else {
+                threeEl.classList.add('hidden');
+                imgEl.classList.remove('hidden');
+                imgEl.src = generateHighResScientificPNG(q.visual, q.subtopic, idx + 1);
+            }
+
+            // Opciones Cerradas vs Abiertas
+            const closedGrid = document.getElementById('closedOptionsGrid');
+            const openBox = document.getElementById('openResponseBox');
+
+            if (q.type === 'closed') {
+                openBox.classList.add('hidden');
+                closedGrid.classList.remove('hidden');
+                closedGrid.innerHTML = '';
+
+                q.options.forEach((optStr, optIndex) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    const isSelected = (appState.answers[idx] === optIndex);
+                    btn.className = `option-card w-full text-left p-3.5 rounded-2xl flex items-start gap-3 text-xs sm:text-sm ${isSelected ? 'selected text-white font-semibold' : 'text-slate-200'}`;
+                    btn.innerHTML = `
+                        <span class="w-7 h-7 rounded-lg bg-navy-900 border border-gold-500/40 text-gold-300 font-mono font-bold flex items-center justify-center shrink-0">${optStr.charAt(0)}</span>
+                        <span class="leading-relaxed">${optStr.substring(3)}</span>
+                    `;
+                    btn.onclick = () => {
+                        appState.answers[idx] = optIndex;
+                        Array.from(closedGrid.children).forEach(c => c.classList.remove('selected', 'text-white', 'font-semibold'));
+                        btn.classList.add('selected', 'text-white', 'font-semibold');
+                        evaluateNextButtonState();
+                        saveLocalProgress();
+                    };
+                    closedGrid.appendChild(btn);
+                });
+            } else {
+                closedGrid.classList.add('hidden');
+                openBox.classList.remove('hidden');
+                const area = document.getElementById('openTextarea');
+                area.value = appState.answers[idx] || '';
+                checkOpenAnswerMetrics(area.value);
+                area.oninput = (e) => {
+                    appState.answers[idx] = e.target.value;
+                    checkOpenAnswerMetrics(e.target.value);
+                    evaluateNextButtonState();
+                    saveLocalProgress();
+                };
+            }
+
+            startQuestionCountdown();
+            evaluateNextButtonState();
+        }
+
+        function checkOpenAnswerMetrics(text) {
+            const words = text.trim().split(/\s+/).filter(w => w.length >= 2);
+            const approxLines = Math.max(text.split('\n').filter(l => l.trim().length > 0).length, Math.floor(words.length / 7));
+            const tag = document.getElementById('openMetricsTag');
+            tag.textContent = `${words.length} / 28 palabras | ${approxLines} / 4 líneas`;
+
+            const valid = (words.length >= 28 && approxLines >= 4);
+            tag.className = valid
+                ? 'font-mono text-emerald-300 bg-emerald-950/80 px-2.5 py-1 rounded border border-emerald-500/50 font-bold'
+                : 'font-mono text-amber-300 bg-navy-950 px-2.5 py-1 rounded border border-slate-700';
+            return valid;
+        }
+
+        function startQuestionCountdown() {
+            if (timerLoop) clearInterval(timerLoop);
+            refreshTimerUI();
+
+            timerLoop = setInterval(() => {
+                if (appState.timerLeft > 0 && appState.restrictions.timerLock) {
+                    appState.timerLeft--;
+                    refreshTimerUI();
+                } else {
+                    appState.timerLeft = 0;
+                    refreshTimerUI();
+                    clearInterval(timerLoop);
+                    evaluateNextButtonState();
+                }
+            }, 1000);
+        }
+
+        function refreshTimerUI() {
+            const mins = Math.floor(appState.timerLeft / 60).toString().padStart(2, '0');
+            const secs = (appState.timerLeft % 60).toString().padStart(2, '0');
+            const txt = document.getElementById('timerText');
+            txt.textContent = `${mins}:${secs}`;
+
+            // Actualizar anillo SVG (circunferencia = 94.2)
+            const ring = document.getElementById('timerRing');
+            const ratio = appState.timerMax > 0 ? (appState.timerLeft / appState.timerMax) : 0;
+            ring.style.strokeDashoffset = (94.2 * (1 - ratio)).toFixed(1);
+
+            if (appState.timerLeft === 0) {
+                txt.className = 'font-mono text-lg font-extrabold text-emerald-400 leading-none';
+                ring.setAttribute('stroke', '#10b981');
+            } else if (appState.timerLeft <= 15) {
+                txt.className = 'font-mono text-lg font-extrabold text-rose-400 animate-pulse leading-none';
+                ring.setAttribute('stroke', '#f43f5e');
+            } else {
+                txt.className = 'font-mono text-lg font-extrabold text-gold-300 leading-none';
+                ring.setAttribute('stroke', '#dfb235');
+            }
+        }
+
+        function evaluateNextButtonState() {
+            const q = QUESTIONS[appState.currentIdx];
+            const timeReady = (appState.timerLeft === 0 || !appState.restrictions.timerLock);
+            const answerReady = (q.type === 'closed')
+                ? (appState.answers[appState.currentIdx] !== undefined)
+                : checkOpenAnswerMetrics(appState.answers[appState.currentIdx] || '');
+
+            const btn = document.getElementById('nextQuestionBtn');
+            const banner = document.getElementById('statusLockBanner');
+
+            if (timeReady && answerReady) {
+                btn.disabled = false;
+                btn.className = 'w-full sm:w-auto px-8 py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-gradient-to-r from-gold-500 to-amber-500 hover:from-gold-400 hover:to-amber-400 text-navy-950 shadow-lg shadow-gold-500/30 cursor-pointer transition transform active:scale-95';
+                btn.textContent = (appState.currentIdx === QUESTIONS.length - 1) ? 'FINALIZAR Y ENTREGAR EXAMEN ✓' : 'AVANZAR A LA SIGUIENTE PREGUNTA ➔';
+                banner.innerHTML = `<span class="text-emerald-400 font-bold">✓ Pregunta desbloqueada. Puedes continuar.</span>`;
+            } else {
+                btn.disabled = true;
+                btn.className = 'w-full sm:w-auto px-7 py-3 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-slate-800 text-slate-500 cursor-not-allowed transition-all';
+                if (!timeReady) {
+                    btn.textContent = `Bloqueado (${appState.timerLeft}s)`;
+                    banner.innerHTML = `<span class="text-amber-300">⏳ Tiempo reglamentario activo. Selecciona o redacta tu respuesta.</span>`;
+                } else {
+                    btn.textContent = 'Falta Respuesta';
+                    banner.innerHTML = `<span class="text-rose-400 font-bold">⚠ Tiempo cumplido: selecciona una opción o completa las 4 líneas para avanzar.</span>`;
+                }
+            }
+        }
+
+        function goToNextQuestion() {
+            if (timerLoop) clearInterval(timerLoop);
+            renderQuestionByIndex(appState.currentIdx + 1);
+            syncWithFirebaseServer();
+        }
+
+        document.getElementById('nextQuestionBtn').addEventListener('click', goToNextQuestion);
+
+        /* =========================================================================
+           8. SISTEMA ANTIFRAUDE (GOBERNADO POR CONSOLA REMOTA)
+           ========================================================================= */
+        function setupSecurityListeners() {
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement && appState.started && !appState.finished && appState.restrictions.fullscreenLock) {
+                    document.getElementById('fullscreenLockModal').classList.remove('hidden');
+                    document.getElementById('fullscreenLockModal').classList.add('flex');
+                    if (appState.restrictions.tabSwitchPenalty) {
+                        registerInfraction('Abandono de modo Pantalla Completa', 0.5);
+                    }
+                }
+            });
+
+            document.getElementById('returnFullscreenBtn').addEventListener('click', () => {
+                document.documentElement.requestFullscreen().catch(() => {});
+                document.getElementById('fullscreenLockModal').classList.add('hidden');
+                document.getElementById('fullscreenLockModal').classList.remove('flex');
+            });
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden && appState.started && !appState.finished && appState.restrictions.tabSwitchPenalty) {
+                    const inactiveSecs = (Date.now() - appState.lastActivity) / 1000;
+                    if (inactiveSecs < 7.5) {
+                        registerInfraction('Cambio de pestaña o ventana detectado', 0.5);
+                    }
+                }
+                appState.lastActivity = Date.now();
+            });
+
+            ['pointerdown', 'keydown', 'touchstart'].forEach(ev => {
+                window.addEventListener(ev, () => appState.lastActivity = Date.now(), { passive: true });
+            });
+
+            window.addEventListener('contextmenu', e => e.preventDefault());
+            window.addEventListener('keydown', e => {
+                if (e.key === 'F12' || (e.ctrlKey && ['c', 'v', 'x', 'u', 's', 'p'].includes(e.key.toLowerCase()))) {
+                    e.preventDefault();
+                }
+            });
+
+            // Sonómetro al 60%
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(stream => {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const src = audioCtx.createMediaStreamSource(stream);
+                const analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                src.connect(analyser);
+                const data = new Uint8Array(analyser.frequencyBinCount);
+
+                const monitorAudio = () => {
+                    if (appState.started && !appState.finished) {
+                        analyser.getByteFrequencyData(data);
+                        let sum = 0;
+                        for (let i = 0; i < data.length; i++) sum += data[i];
+                        const pct = Math.min(100, Math.round(((sum / data.length) / 125) * 100));
+
+                        document.getElementById('soundBar').style.width = `${pct}%`;
+                        document.getElementById('soundPct').textContent = `${pct}%`;
+
+                        if (pct >= 60 && appState.restrictions.soundMeterPenalty && Date.now() > appState.soundCooldown) {
+                            appState.soundCooldown = Date.now() + 10000;
+                            registerInfraction(`Nivel acústico superior al límite (${pct}%)`, 0.5);
+                        }
+                    }
+                    requestAnimationFrame(monitorAudio);
+                };
+                monitorAudio();
+            }).catch(() => {
+                document.getElementById('soundPct').textContent = 'OFF';
+            });
+        }
+
+        function registerInfraction(motivo, pts) {
+            appState.penalties = Number((appState.penalties + pts).toFixed(2));
+            appState.penaltyHistory.push({
+                motivo,
+                pts,
+                hora: new Date().toLocaleTimeString(),
+                pregunta: appState.currentIdx + 1
+            });
+
+            const badge = document.getElementById('penaltyBadge');
+            badge.classList.remove('hidden');
+            badge.classList.add('flex');
+            document.getElementById('penaltyValue').textContent = `-${appState.penalties.toFixed(1)}`;
+            syncWithFirebaseServer();
+        }
+
+        /* =========================================================================
+           9. CALIFICACIÓN FINAL, QR Y EXPORTACIÓN PDF CON TEXTO DE ABIERTAS
+           ========================================================================= */
+        async function finishEvaluation() {
+            if (timerLoop) clearInterval(timerLoop);
+            appState.finished = true;
+            appState.endTimeStr = new Date().toLocaleTimeString();
+
+            let hits = 0;
+            for (let i = 0; i < CONFIG.numClosed; i++) {
+                if (appState.answers[i] === QUESTIONS[i].correct) hits++;
+            }
+            const scoreClosed = (hits / CONFIG.numClosed) * CONFIG.closedTotalPts;
+
+            let openCompleted = 0;
+            for (let j = CONFIG.numClosed; j < QUESTIONS.length; j++) {
+                if (checkOpenAnswerMetrics(appState.answers[j] || '')) openCompleted++;
+            }
+            const scoreOpen = (openCompleted / CONFIG.numOpen) * CONFIG.openTotalPts;
+
+            const baseScore = Number((scoreClosed + scoreOpen).toFixed(2));
+            const finalScore = Math.max(0.00, Number((baseScore - appState.penalties).toFixed(2)));
+
+            document.getElementById('examView').classList.add('hidden');
+            document.getElementById('resultsView').classList.remove('hidden');
+
+            document.getElementById('finalStudentLabel').textContent = `ESTUDIANTE: ${appState.studentName.toUpperCase()}`;
+            document.getElementById('resBaseScore').textContent = baseScore.toFixed(2);
+            document.getElementById('resPenaltyScore').textContent = `-${appState.penalties.toFixed(2)}`;
+            document.getElementById('resFinalScore').textContent = finalScore.toFixed(2);
+
+            new QRious({
+                element: document.getElementById('qrCanvas'),
+                value: JSON.stringify({
+                    colegio: 'Faro de Luz',
+                    docente: 'Cristian David Ayazo',
+                    examen: CONFIG.examId,
+                    estudiante: appState.studentName,
+                    notaFinal: finalScore,
+                    base: baseScore,
+                    aciertosCerradas: `${hits}/25`,
+                    abiertasValidas: `${openCompleted}/5`
+                }),
+                size: 160,
+                level: 'H'
+            });
+
+            // Guardar entrega completa en Firebase
+            try {
+                await fetch(`${CONFIG.firebaseUrl}exams/${CONFIG.examId}/submissions/${appState.studentId}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: appState.studentId,
+                        studentName: appState.studentName,
+                        baseScore,
+                        penalties: appState.penalties,
+                        finalScore,
+                        closedHits: hits,
+                        openCompleted,
+                        answers: appState.answers,
+                        penaltyHistory: appState.penaltyHistory,
+                        submittedAt: new Date().toISOString()
+                    })
+                });
+            } catch (e) {}
+
+            syncWithFirebaseServer();
+        }
+
+        // Exportación de Reporte Completo PDF
+        document.getElementById('downloadPdfReportBtn').addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+
+            doc.addImage(generateOfficialBannerDataURL(), 'PNG', 30, 25, 552, 115);
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(13);
+            doc.setTextColor(8, 27, 56);
+            doc.text(`REPORTE INDIVIDUAL DE EVALUACIÓN • ${appState.studentName.toUpperCase()}`, 30, 165);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(60, 70, 85);
+            doc.text(`Inicio: ${appState.startTimeStr} | Fin: ${appState.endTimeStr} | Puntaje Base: ${document.getElementById('resBaseScore').textContent} | Penalizaciones: ${document.getElementById('resPenaltyScore').textContent} | NOTA FINAL: ${document.getElementById('resFinalScore').textContent}`, 30, 182);
+
+            const qrData = document.getElementById('qrCanvas').toDataURL('image/png');
+            doc.addImage(qrData, 'PNG', 490, 145, 85, 85);
+
+            let y = 240;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(8, 27, 56);
+            doc.text('RESPUESTAS DE PREGUNTAS ABIERTAS REDACTADAS POR EL ESTUDIANTE:', 30, y);
+            y += 18;
+
+            for (let k = CONFIG.numClosed; k < QUESTIONS.length; k++) {
+                if (y > 680) { doc.addPage(); y = 40; }
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9.5);
+                doc.setTextColor(15, 43, 84);
+                doc.text(`Pregunta Abierta #${k + 1} (${QUESTIONS[k].subtopic}):`, 30, y);
+                y += 13;
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(40, 40, 40);
+                const respText = appState.answers[k] || 'Sin respuesta registrada.';
+                const lines = doc.splitTextToSize(respText, 540);
+                doc.text(lines, 35, y);
+                y += (lines.length * 12) + 12;
+            }
+
+            doc.save(`Reporte_Quimica10_${appState.studentName.replace(/\s+/g, '_')}.pdf`);
+        });
+
+        /* =========================================================================
+           10. INICIALIZACIÓN Y PARTÍCULAS INTERACTIVAS
+           ========================================================================= */
+        const nameInput = document.getElementById('studentNameInput');
+        const startButton = document.getElementById('startBtn');
+        nameInput.addEventListener('input', e => {
+            const words = e.target.value.trim().split(/\s+/).filter(w => w.length >= 2);
+            if (words.length >= 2) {
+                startButton.disabled = false;
+                startButton.className = 'w-full py-4 rounded-xl font-extrabold text-sm uppercase tracking-wider bg-gradient-to-r from-gold-500 to-amber-500 hover:from-gold-400 hover:to-amber-400 text-navy-950 cursor-pointer transition-all shadow-xl shadow-gold-500/25';
+                startButton.textContent = 'INICIAR EVALUACIÓN DE QUÍMICA 10° ➔';
+                document.getElementById('nameCheckTag').textContent = '✓ Válido';
+                document.getElementById('nameCheckTag').className = 'absolute right-3.5 top-3.5 text-xs font-mono text-emerald-400 font-bold';
+            } else {
+                startButton.disabled = true;
+                startButton.className = 'w-full py-4 rounded-xl font-extrabold text-sm uppercase tracking-wider bg-slate-800 text-slate-500 cursor-not-allowed transition-all';
+                startButton.textContent = 'Escribe tu nombre y apellido para activar la evaluación';
+                document.getElementById('nameCheckTag').textContent = 'Mín. 2 palabras';
+                document.getElementById('nameCheckTag').className = 'absolute right-3.5 top-3.5 text-xs font-mono text-slate-400';
+            }
+        });
+
+        startButton.addEventListener('click', beginExamSession);
+
+        setInterval(() => {
+            document.getElementById('liveClock').textContent = new Date().toLocaleTimeString();
+        }, 1000);
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Renderizar Banner en pantalla inicial
+            const bCanvas = document.getElementById('bannerCanvas');
+            const bCtx = bCanvas.getContext('2d');
+            const img = new Image();
+            img.src = generateOfficialBannerDataURL();
+            img.onload = () => {
+                bCanvas.width = 1200;
+                bCanvas.height = 260;
+                bCtx.drawImage(img, 0, 0);
+            };
+
+            setupSecurityListeners();
+
+            // Fondo de partículas
+            const bgC = document.getElementById('bgCanvas');
+            const ctx = bgC.getContext('2d');
+            let w = bgC.width = window.innerWidth;
+            let h = bgC.height = window.innerHeight;
+            window.addEventListener('resize', () => { w = bgC.width = window.innerWidth; h = bgC.height = window.innerHeight; });
+
+            const pts = Array.from({ length: 50 }, () => ({
+                x: Math.random() * w, y: Math.random() * h,
+                r: Math.random() * 2.2 + 0.8,
+                vx: (Math.random() - 0.5) * 0.45, vy: (Math.random() - 0.5) * 0.45
+            }));
+
+            function drawBg() {
+                ctx.clearRect(0, 0, w, h);
+                pts.forEach(p => {
+                    p.x = (p.x + p.vx + w) % w;
+                    p.y = (p.y + p.vy + h) % h;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(223, 178, 53, 0.25)'; ctx.fill();
+                });
+                requestAnimationFrame(drawBg);
+            }
+            drawBg();
+        });
+    </script>
+</body>
+</html>
